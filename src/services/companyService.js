@@ -32,9 +32,19 @@ async function insertCompany(company) {
   }
   // Insert into Company_emails only if not already present for this email
   if (!(await isCompanyEmailDuplicate(organization_name, email))) {
-    emailEntry = await prisma.company_emails.create({
-      data: { organization_name, first_name, last_name, email, title, linkedin_url }
-    });
+    try {
+      emailEntry = await prisma.company_emails.create({
+        data: { organization_name, first_name, last_name, email, title, linkedin_url }
+      });
+    } catch (err) {
+      // If unique constraint fails, skip and continue
+      if (err.code === 'P2002' && err.meta?.target?.includes('email')) {
+        // Duplicate email, skip
+        emailEntry = null;
+      } else {
+        throw err;
+      }
+    }
   }
   return { dataEntry, emailEntry };
 }
